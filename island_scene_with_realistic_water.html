@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Island Scene</title>
+		<style>
+            body { margin: 0; }
+            canvas {display: block; }
+        </style>
+	</head>
+	<body>
+		<div id="container"></div>
+
+		<script src="textures/waternormals.jpg"></script>
+		<script src="textures/sandwshells.png"></script>
+		<script src="textures/sand-1545316_1920.jpg"></script>
+		<script src="textures/rustedmetal.jpg"></script>
+		<script src="textures/lensflare0.png"></script>
+		<script src="textures/BeachBallColor.jpg"></script>
+		<script src="textures/beach_towel_texture.jpg"></script>
+		<script src="models/coconut_tree/scene.gltf"></script>
+        <script src="models/beach_chair/scene.gltf"></script>
+        <script src="models/beach_umbrella/scene.gltf"></script>
+        <script src="models/coconut_palm_tree/scene.gltf"></script>
+        <script src="models/irwin/scene.gltf"></script> 
+        <script src="models/2002_grand_banks/scene.gltf"></script>
+        <script src="models/cruise_ship/scene.gltf"></script>
+        <script src="models/yacht/scene.gltf"></script>
+        <script src="models/grady_white/scene.gltf"></script>
+
+
+		
+		<script type="module">
+
+			import * as THREE from '../three/build/three.module.js';
+
+			import Stats from './three/examples/jsm/libs/stats.module.js';
+
+			import { GUI } from './three/examples/jsm/libs/dat.gui.module.js';
+			import { OrbitControls } from './three/examples/jsm/controls/OrbitControls.js';
+			import { Water } from './three/examples/jsm/objects/Water.js';
+			import { Sky } from './three/examples/jsm/objects/Sky.js';
+			import { GLTFLoader } from './three/examples/jsm/loaders/GLTFLoader.js';
+
+			let container, stats;
+			let camera, scene, renderer;
+			let controls, water, sun, mesh;
+			let standmesh, stand2mesh, stand3mesh, stand4mesh, middlecylinderMesh, booeyBaseMesh, lightcylinderMesh, sphereMesh, beachTowelMesh, beachTowel2Mesh;
+			let irwinSailboat, cruise_ship, yacht, grady_white, grand_banks;
+			const group = new THREE.Group();
+			const gltfLoader = new GLTFLoader();
+
+
+			init();
+			animate();
+
+			function init() {
+
+				container = document.getElementById( 'container' );
+
+				//Renderer
+
+				renderer = new THREE.WebGLRenderer({antialias:true});
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.body.appendChild( renderer.domElement );
+
+				//Scene
+				scene = new THREE.Scene();
+
+				//Camera
+				camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 1, 20000 );
+				camera.position.set( 30, 30, 100 );
+
+				//texture loader
+            	const textureLoader = new THREE.TextureLoader();
+
+            	//lights
+
+				//hemisphere light
+				const hemiLight = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 );
+				scene.add( hemiLight );
+
+				//island needs light (directional light pointing down at the island)
+	            const dlightcolor = 0xFFFFFF; //white light
+	            const dlightintensity = 0.5;
+	            const dlight = new THREE.DirectionalLight(dlightcolor,dlightintensity);
+	            dlight.position.set(-30, 100,-220); //posotioned above and a little behind the island
+	            scene.add(dlight);
+	            const targetObject = new THREE.Object3D(); //light is pointed at the island to illuminate the island and show its texture
+	            targetObject.position.set(-30, 0, -220);
+				dlight.target = targetObject;
+				scene.add(targetObject);
+
+				//Sun
+
+				sun = new THREE.Vector3();
+
+				// Water imported from open source threejs examples and modified for this project
+				//plane object used for the water
+				const waterGeometry = new THREE.PlaneBufferGeometry( 10000, 10000 );
+				//water object from threejs examples /three/examples/jsm/objects/Water.js
+				water = new Water(
+					waterGeometry,
+					{
+						textureWidth: 512,
+						textureHeight: 512,
+						waterNormals: new THREE.TextureLoader().load( 'textures/waternormals.jpg', function ( texture ) { //texture is loaded in and used to set water normals
+
+							texture.wrapS = texture.wrapT = THREE.RepeatWrapping; //using a repeat wrapping to wrap the plane with the texture
+
+						} ),
+						alpha: 1.0, //opaque
+						sunDirection: new THREE.Vector3(),
+						sunColor: 0xffffff, //white light
+						waterColor: 0x7DFFFF, //aqua water color
+						distortionScale: 3.7, //distorts the relected images in the water for a realistic reflection
+						fog: scene.fog !== undefined
+					}
+				);
+
+				water.rotation.x = - Math.PI / 2; //plane is rotated so the water lies flat as a base for the scene
+
+				scene.add( water );
+
+				//cylinder island created by Nathan Rice
+				//base is larger radius than top to have a island look
+				const islandradiusTop = 100; 
+				const islandradiusBottom = 125;
+				const islandcylinderHeight = 8;
+				const islandRadialSegments = 40; //more radial segments smooths the edges of the island (made up of more triangles)
+				const islandGeometry = new THREE.CylinderBufferGeometry(islandradiusTop, islandradiusBottom, islandcylinderHeight, islandRadialSegments);
+
+	            // ground
+	            const groundTexture = textureLoader.load( "textures/sandwshells.png" ); //texture loaded for the sand on the island
+	            groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping; //used repeat wrapping to cover the island
+	            groundTexture.repeat.set( 25, 25 );
+	            groundTexture.anisotropy = 16;
+	            //ground material is a lambertian surface so that it does not reflect much light for a realistic ground look
+	            const groundMaterial = new THREE.MeshLambertMaterial( { map: groundTexture } );
+				let groundMesh = new THREE.Mesh( islandGeometry, groundMaterial );
+	            groundMesh.position.set(-30, -1,-120); //sets world coordinates for the island
+	            groundMesh.receiveShadow = true;
+	            scene.add( groundMesh );
+
+				
+				// Skybox
+				//sky object imported from open source threejs examples and modified for this project 'three/examples/jsm/objects/Sky.js'
+				const sky = new Sky();
+				sky.scale.setScalar( 10000 );
+				scene.add( sky );
+
+				const skyUniforms = sky.material.uniforms;
+
+				skyUniforms[ 'turbidity' ].value = 10;
+				skyUniforms[ 'rayleigh' ].value = 2;
+				skyUniforms[ 'mieCoefficient' ].value = 0.005;
+				skyUniforms[ 'mieDirectionalG' ].value = 0.8;
+
+				const parameters = {
+					inclination: 0.49,
+					azimuth: 0.205
+				};
+
+				const pmremGenerator = new THREE.PMREMGenerator( renderer );
+				//function to facilitate the changes made in the GUI setting the position of the sun 
+				function updateSun() {
+
+					const theta = Math.PI * ( parameters.inclination - 0.5 );
+					const phi = 2 * Math.PI * ( parameters.azimuth - 0.5 );
+
+					sun.x = Math.cos( phi );
+					sun.y = Math.sin( phi ) * Math.sin( theta );
+					sun.z = Math.sin( phi ) * Math.cos( theta );
+
+					sky.material.uniforms[ 'sunPosition' ].value.copy( sun );
+					water.material.uniforms[ 'sunDirection' ].value.copy( sun ).normalize();
+
+					scene.environment = pmremGenerator.fromScene( sky ).texture;
+
+				}
+
+				updateSun();
+
+				//
+				//Make objects
+				//Booey made by Nathan Rice
+				//make a booey
+				const booeyTexture = textureLoader.load( 'textures/rustedmetal.jpg' ); //rusted metal picture loaded for texture on booey for a realistic look
+				const booeyMaterial = new THREE.MeshLambertMaterial( { map: booeyTexture } ); //lambert material most light is absorbed and little reflected for rusted metal old worn look
+				//make a cylinder base
+				const baseradiusTop = 5;
+				const baseradiusBottom = 5;
+				const basecylinderHeight = 7;
+				const cylinderRadialSegments = 10;
+				const booeyBaseGeometry = new THREE.CylinderBufferGeometry(baseradiusTop, baseradiusBottom, basecylinderHeight, cylinderRadialSegments);
+				booeyBaseMesh = new THREE.Mesh(booeyBaseGeometry, booeyMaterial)
+				//set world coordinates for base
+				booeyBaseMesh.position.x = -60;
+				booeyBaseMesh.position.y = -0.25;
+				booeyBaseMesh.position.z = -15;
+				//add base to booey group snaps the pieces together so that it can be scaled and animated as one solid object
+				group.add(booeyBaseMesh);
+
+				//supports
+				const standwidth = 0.5;
+				const standheight = 10; 
+				const standdepth = 0.5;
+				const standgeometry = new THREE.BoxBufferGeometry( standwidth, standheight, standdepth );
+				standmesh = new THREE.Mesh( standgeometry, booeyMaterial );
+				//stand is positioned on top of base in world coordinates
+				standmesh.position.x = booeyBaseMesh.position.x + 1.25;
+				standmesh.position.y = booeyBaseMesh.position.y + basecylinderHeight + 1;
+				standmesh.position.z = booeyBaseMesh.position.z -1;
+				//stand added to booey group (there are 4 of these stand posts)
+				group.add(standmesh);
+
+				stand2mesh = new THREE.Mesh( standgeometry, booeyMaterial );
+				stand2mesh.position.x = booeyBaseMesh.position.x - 1.25;
+				stand2mesh.position.y = booeyBaseMesh.position.y + basecylinderHeight + 1;
+				stand2mesh.position.z = booeyBaseMesh.position.z - 1;
+
+				group.add(stand2mesh);
+
+				stand3mesh = new THREE.Mesh( standgeometry, booeyMaterial );
+				stand3mesh.position.x = booeyBaseMesh.position.x + 1.25;
+				stand3mesh.position.y = booeyBaseMesh.position.y + basecylinderHeight + 1;
+				stand3mesh.position.z = booeyBaseMesh.position.z + 1;
+
+				group.add(stand3mesh);
+
+				stand4mesh = new THREE.Mesh( standgeometry, booeyMaterial );
+				stand4mesh.position.x = booeyBaseMesh.position.x - 1.25;
+				stand4mesh.position.y = booeyBaseMesh.position.y + basecylinderHeight + 1;
+				stand4mesh.position.z = booeyBaseMesh.position.z + 1;
+
+				group.add(stand4mesh);
+
+				//top cylinder
+				const middleradiusTop = 2;
+				const middleradiusBottom = 2;
+				const middlecylinderHeight = 5;
+				const middlecylinderGeometry = new THREE.CylinderBufferGeometry(middleradiusTop, middleradiusBottom, middlecylinderHeight, cylinderRadialSegments);
+				middlecylinderMesh = new THREE.Mesh(middlecylinderGeometry, booeyMaterial)
+				//middle cylinder is placed on top of stand posts specified here in world coordinates
+				middlecylinderMesh.position.x = booeyBaseMesh.position.x;
+				middlecylinderMesh.position.y = standmesh.position.y + standheight - 2.5;
+				middlecylinderMesh.position.z = booeyBaseMesh.position.z;
+				//snapped to booey group
+				group.add(middlecylinderMesh);
+
+				//I used a lens flare picture and texture mapped that on top to look like a light
+				const booeyLightTexture = textureLoader.load( 'textures/lensflare0.png' );
+				const booeyLightMaterial = new THREE.MeshBasicMaterial( { map: booeyLightTexture } );
+
+				//geometry for the light on top of the booey
+				const lightradiusTop = 0.5;
+				const lightradiusBottom = 0.75;
+				const lightcylinderHeight = 4;
+				const lightRadialSegments = 30;
+				const lightcylinderGeometry = new THREE.CylinderBufferGeometry(lightradiusTop, lightradiusBottom, lightcylinderHeight, lightRadialSegments);
+				lightcylinderMesh = new THREE.Mesh(lightcylinderGeometry, booeyLightMaterial)
+				//light placed on top of the booey specified here in world coordinates
+				lightcylinderMesh.position.x = booeyBaseMesh.position.x;
+				lightcylinderMesh.position.y = middlecylinderMesh.position.y + middlecylinderHeight/2;
+				lightcylinderMesh.position.z = booeyBaseMesh.position.z;
+				//snapped to booey group
+				group.add(lightcylinderMesh);
+				//scaled down the booey by 0.5
+				group.scale.set(0.5, 0.5, 0.5);
+				//rotated the booey so the good side faces the viewer
+				group.rotation.y = Math.PI;
+				//booey group added to the scene
+				scene.add(group);
+
+				//
+				//add a sphere(beachball)
+				//beachball made by Nathan Rice
+				const beachBallTexture = textureLoader.load( 'textures/BeachBallColor.jpg' ); //sphere texture mapped with beach ball pattern
+				const beachBallMaterial = new THREE.MeshBasicMaterial( { map: beachBallTexture } );
+				const sphereradius = 2;
+				const spherewidthSegments = 30; //number of triangles 30 for smooth curve around the sphere
+				const sphereheightSegments = 30;
+				const sphereGeometry = new THREE.SphereBufferGeometry(sphereradius, spherewidthSegments, sphereheightSegments);
+				sphereMesh = new THREE.Mesh(sphereGeometry, beachBallMaterial);
+				//position in world coordinates
+				sphereMesh.position.set(-80, 1, 50);
+				//beachball added to the scene
+				scene.add(sphereMesh);
+
+				//beach towel by Nathan Rice
+				const beachTowelTexture = textureLoader.load('textures/beach_towel_texture.jpg'); //beach towel texture mapped to plane geometry
+				const beachTowelMaterial = new THREE.MeshBasicMaterial( {map: beachTowelTexture});
+				const beachTowelGeometry = new THREE.PlaneBufferGeometry( 7, 15 );
+				beachTowelMesh = new THREE.Mesh(beachTowelGeometry, beachTowelMaterial);
+				beachTowelMesh.receiveShadow = true;
+				//beach towel plane is rotated to sit flat on the ground
+				beachTowelMesh.rotation.x = -Math.PI/2;
+				//beach towel world coordinates specified here to sit in front of beach chairs
+				beachTowelMesh.position.set(-35, 4,-100);
+				//beach towel added to the scene
+				scene.add(beachTowelMesh);
+
+				//second beach towel
+				beachTowel2Mesh = new THREE.Mesh(beachTowelGeometry, beachTowelMaterial)
+				beachTowel2Mesh.receiveShadow = true;
+				beachTowel2Mesh.rotation.x = -Math.PI/2;
+				beachTowel2Mesh.position.set(-25, 4,-100);
+				scene.add(beachTowel2Mesh);
+
+				//
+	            //GLTF loader loads in artist made objects from sketchfab.com all are creative commons licence https://creativecommons.org/licenses/by/4.0/
+
+	            //https://skfb.ly/6SYTu beach umbrella by stealth86
+	            gltfLoader.load('models/beach_umbrella/scene.gltf', (gltf) => {
+	           		const beach_umbrella = gltf.scene;
+	           		//set world coordinates
+	                beach_umbrella.position.set(-40, 2,-120);
+	                //scale object uniformly 
+	                beach_umbrella.scale.set(0.05, 0.05, 0.05);
+	                beach_umbrella.receiveShadow = true;
+	                beach_umbrella.castShadow = true;
+	            	scene.add(beach_umbrella);
+	            });
+	            
+	            //https://skfb.ly/6DoHW beach chair by stealth86
+	           	gltfLoader.load('models/beach_chair/scene.gltf', (gltf) => {
+	           		const root = gltf.scene;
+	                root.position.set(-25, 4,-120);
+	                root.scale.set(0.75, 0.75, 0.75);
+	                root.receiveShadow = true;
+	                root.castShadow = true;
+	            	scene.add(root);
+	            });
+	           	
+	           	//https://skfb.ly/6DoHW beach chair by stealth86
+	            gltfLoader.load('models/beach_chair/scene.gltf', (gltf) => {
+	                const root2 = gltf.scene;
+	                root2.position.set(-35, 4,-120);
+	                root2.scale.set(0.75, 0.75, 0.75);
+	                root2.receiveShadow = true;
+	                root2.castShadow = true;
+	                scene.add(root2);
+	            });
+	            
+	            //https://skfb.ly/6DtwH by Petro.Stepaniuk
+	            gltfLoader.load('models/coconut_palm_tree/scene.gltf', (gltf) => {
+	                const coconut_palm_tree = gltf.scene;
+	                coconut_palm_tree.position.set( -100, 4, -120 );
+	                coconut_palm_tree.scale.set(0.025, 0.025, 0.025);
+	                coconut_palm_tree.receiveShadow = true;
+	                coconut_palm_tree.castShadow = true;
+	                scene.add(coconut_palm_tree);
+	            });
+	            
+	            //https://skfb.ly/6DtwH by Petro.Stepaniuk
+	            gltfLoader.load('models/coconut_palm_tree/scene.gltf', (gltf) => {
+	                const coconut_palm_tree2 = gltf.scene;
+	                coconut_palm_tree2.position.set( 40, 4, -80);
+	                coconut_palm_tree2.scale.set(0.025, 0.025, 0.025);
+	                coconut_palm_tree2.receiveShadow = true;
+	                coconut_palm_tree2.castShadow = true;
+	                scene.add(coconut_palm_tree2);
+	            });
+
+	            //https://skfb.ly/6TxXI by Rodrigo Gelmi
+	            gltfLoader.load('models/coconut_tree/scene.gltf', (gltf) => {
+	                const coconut_tree = gltf.scene;
+	                coconut_tree.position.set( -100, 4, -80);
+	                coconut_tree.scale.set(0.05, 0.05, 0.05);
+	                coconut_tree.receiveShadow = true;
+	                coconut_tree.castShadow = true;
+	                scene.add(coconut_tree);
+	            });
+
+	            //https://skfb.ly/6TxXI by Rodrigo Gelmi
+	            gltfLoader.load('models/coconut_tree/scene.gltf', (gltf) => {
+	                const coconut_tree2 = gltf.scene;
+	                coconut_tree2.position.set( 20, 4, -100 );
+	                coconut_tree2.scale.set(0.05, 0.05, 0.05);
+	                coconut_tree2.receiveShadow = true;
+	                coconut_tree2.castShadow = true;
+	                scene.add(coconut_tree2);
+	            });
+
+	            //https://skfb.ly/6WGBQ Irwin Sailboat by BoatUSFoundation
+	            gltfLoader.load('models/irwin/scene.gltf', (gltf) => {
+	            	irwinSailboat = gltf.scene;
+	            	irwinSailboat.position.set(-150, -8, -25);
+	            	irwinSailboat.scale.set(4,4,4);
+	            	irwinSailboat.receiveShadow = true;
+	            	irwinSailboat.castShadow = true;
+	            	scene.add(irwinSailboat);
+	            })
+	            
+	            //https://skfb.ly/6R6Pv 2002 Grand Banks by BoatUSFoundation
+	            gltfLoader.load('models/2002_grand_banks/scene.gltf', (gltf) => {
+	            	grand_banks = gltf.scene;
+	            	grand_banks.position.set(-400, 11, -500);
+	            	grand_banks.scale.set(4.5,4.5,4.5);
+	            	grand_banks.rotation.y = Math.PI/2.5;
+	            	grand_banks.receiveShadow = true;
+	            	grand_banks.castShadow = true;
+	            	scene.add(grand_banks);
+	            })
+	            
+	            //https://skfb.ly/6WGC7 Grady White by BoatUSFoundation
+	            gltfLoader.load('models/grady_white/scene.gltf', (gltf) => {
+	            	grady_white = gltf.scene;
+	            	grady_white.position.set(80, -3, -30);
+	            	grady_white.scale.set(4.5,4.5,4.5);
+	            	grady_white.rotation.y = Math.PI/4;
+	            	grady_white.receiveShadow = true;
+	            	grady_white.castShadow = true;
+	            	scene.add(grady_white);
+	            })
+	            
+	            //https://skfb.ly/UvZ7 Cruise Ship by farhad.Guli
+	            gltfLoader.load('models/cruise_ship/scene.gltf', (gltf) => {
+	            	cruise_ship = gltf.scene;
+	            	cruise_ship.position.set(400, 0, -2000);
+	            	cruise_ship.scale.set(.01,.01,.01);
+	            	cruise_ship.rotation.y = -Math.PI/2;
+	            	cruise_ship.receiveShadow = true;
+	            	cruise_ship.castShadow = true;
+	            	scene.add(cruise_ship);
+	            })
+            
+	            //https://skfb.ly/MoCY Yacht by Sergei
+	            gltfLoader.load('models/yacht/scene.gltf', (gltf) => {
+	            	yacht = gltf.scene;
+	            	yacht.position.set(-400, 35, -400);
+	            	yacht.scale.set(3,3,3);
+	            	yacht.rotation.y = -Math.PI/2.5;
+	            	yacht.receiveShadow = true;
+	            	yacht.castShadow = true;
+	            	scene.add(yacht);
+	            })
+
+				//
+
+				//Orbit controls allows camera manipulation for viewing the scene
+
+				controls = new OrbitControls( camera, renderer.domElement );
+				//max angle for viewing above the water only
+			    controls.maxPolarAngle = Math.PI * 0.525;
+			    //center is the island
+				controls.target.set( -35, 0, -120 );
+				controls.update();
+
+				//Stats are in top left corner of the screen 
+
+				stats = new Stats();
+				container.appendChild( stats.dom );
+
+				// GUI is in the top right corner of the screen and allows for changing some of the water and sun parameters interactiviely
+
+				const gui = new GUI();
+
+				const folderSky = gui.addFolder( 'Sky' );
+				folderSky.add( parameters, 'inclination', 0, 0.5, 0.0001 ).onChange( updateSun );
+				folderSky.add( parameters, 'azimuth', 0, 1, 0.0001 ).onChange( updateSun );
+				folderSky.open();
+
+				const waterUniforms = water.material.uniforms;
+
+				const folderWater = gui.addFolder( 'Water' );
+				folderWater.add( waterUniforms.distortionScale, 'value', 0, 8, 0.1 ).name( 'distortionScale' );
+				folderWater.add( waterUniforms.size, 'value', 0.1, 10, 0.1 ).name( 'size' );
+				folderWater.add( waterUniforms.alpha, 'value', 0.9, 1, .001 ).name( 'alpha' );
+				folderWater.open();
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+				render();
+				stats.update();
+
+			}
+
+			function render() {
+
+				const time = performance.now() * 0.001;
+				
+				//beachball animation
+				//position on the z-axis updated with a sin pattern for a in and out motion on the shoreline of the island
+				sphereMesh.position.z = Math.sin( time ) * 5 - 15;
+				//rotation on the x and z axis for an rolling in the waves animation
+				sphereMesh.rotation.x = time * 0.5;
+				sphereMesh.rotation.z = time * 0.5;
+				
+				//booey animation
+				//rotation on the z-axis for a tilting animation for realistic floating in the water
+				group.rotation.z = Math.sin(time) * 0.055;
+				//position on the y axis updated for a bobbing up and down animation for realistic floating in the water
+				group.position.y = Math.sin( time ) *1.5 -1;
+				//x axis rotation added for more floating in the water action
+				group.rotation.x = Math.sin(time) * 0.05;
+
+				//irwin sailboat animation
+				//position on the y axis updated for a bobbing up and down animation for realistic floating in the water
+				irwinSailboat.position.y = Math.sin( time ) *0.5 -6;
+				//rotation on the z-axis for a tilting animation for realistic floating in the water
+				irwinSailboat.rotation.z = Math.sin( time ) *0.1;
+
+				//cruise ship animation
+				//position on the x-axis updated for a movement across the scene animation
+				cruise_ship.position.x -= 0.25;
+				//position on the y axis updated for a bobbing up and down animation for realistic floating in the water
+				cruise_ship.position.y = Math.sin( time ) *0.5;
+				//rotation on the z-axis for a tilting animation for realistic floating in the water
+				cruise_ship.rotation.z = Math.sin( time) *0.025;
+
+				//yacht animation 
+				//position on the y axis updated for a bobbing up and down animation for realistic floating in the water
+				yacht.position.y = Math.sin( time ) *0.1 + 35;
+				//rotation on the z-axis for a tilting animation for realistic floating in the water
+				yacht.rotation.z = Math.sin( time ) *0.05;
+				
+				//grady white animation
+				//position on the y axis updated for a bobbing up and down animation for realistic floating in the water
+				grady_white.position.y = Math.sin( time ) *0.5 -3;
+				//rotation on the z-axis for a tilting animation for realistic floating in the water
+				grady_white.rotation.z = Math.sin( time ) *0.1;
+
+				//grand banks animation
+				//position on the x-axis updated for a movement across the scene animation
+				grand_banks.position.x += 1;
+				//position on the y axis updated for a bobbing up and down animation for realistic floating in the water
+				grand_banks.position.y = Math.sin( time ) *0.5 + 11;
+				//rotation on the z-axis for a tilting animation for realistic floating in the water
+				grand_banks.rotation.z = -Math.sin( time) *0.06;
+				
+				//water animation for a flow of the water 
+				water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
+
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
+	</body>
+</html>
