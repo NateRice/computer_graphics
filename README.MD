@@ -1,5 +1,6 @@
 # Virtual Vacation _using WebGL and three.js_
 ---
+#### To run the file: Download the files in this repo and run "island_scene.html" file in a local server (I use a free application called Fenix), make sure all the files and folders are in the same directory
 # Story
 <p align="center">
    <img src="finalProjectScreenshot.png" width="600px">
