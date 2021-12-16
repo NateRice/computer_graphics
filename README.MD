@@ -1,5 +1,6 @@
 # Virtual Vacation _using WebGL and three.js_
 ---
+## website link https://naterice.github.io/computer_graphics/
 #### To run the file: Download the files in this repo and run "island_scene.html" file in a local server (I use a free application called Fenix), make sure all the files and folders are in the same directory. The scene will load and you can see the animations and orbit the camera with the mouse and arrow keys to explore the scene.
 # Story
 <p align="center">
